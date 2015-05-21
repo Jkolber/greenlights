@@ -1,2 +1,2 @@
 # Greenlights
-Event driven lighting manager for the TerraMod home automation framework.
+Event driven lighting manager for the <a href="https://github.com/hkparker/TerraMod">TerraMod</a> home automation framework.
