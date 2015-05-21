@@ -1,0 +1,334 @@
+<div style="text-align: center;" class="panel panel-default">
+	<div class="panel-heading">
+	 	<h3 class="panel-title">Greenlights</h3>
+	 </div>
+			<div role="tabpanel" style="padding: 1%;">
+				<ul class="nav nav-tabs" role="tablist">
+					<li role="presentation" class="active"><a href="#rules" aria-controls="rules" role="tab" data-toggle="tab">Rules</a></li>
+					<li role="presentation"><a href="#profiles" aria-controls="profiles" role="tab" data-toggle="tab">Profiles</a></li>
+				</ul>
+			
+				<div class="tab-content" style="padding: 1%;">
+					<div role="tabpanel" class="tab-pane fade in active" id="rules">
+						<table id="" style="width:100%">
+							<tr>
+								<th>Name</th>
+								<th>Sensor</th>
+								<th>Start</th>
+								<th>End</th>
+								<th>Minutes</th>
+								<th>Color</th>
+								<th>Lights</th>
+							</tr>
+						
+							<% 
+							rules = settings.db.execute("SELECT id, name, start_time, end_time, color, credits FROM Rules;")
+							if rules
+								rules.each do |rule|
+									id = rule[0]
+									name = rule[1]
+									start = rule[2]
+									finish = rule[3]
+									color_name = rule[4]
+									credits = rule[5]
+									callbacks = settings.db.execute("SELECT callback_uuid FROM rule_callback_junction WHERE rule_id=?;", id)
+									callback_names = ""
+									callback_uuids = ""
+									callbacks.each_with_index do |uuid, index|
+										callback_names << (settings.db.execute("SELECT name FROM Modules where uuid=?;", uuid)).flatten[index]
+										callback_names << ", " if uuid!=callbacks.last
+									end
+									lights = settings.db.execute("SELECT label from Lights WHERE id IN 
+									(SELECT light_id FROM rule_light_junction WHERE rule_id=?);", id).flatten
+									light_names = ""
+									lights.each_with_index do |light|
+										light_names << "#{light}"
+										light_names << ", " if light!=lights.last
+									end
+							
+									start_string = ""
+									start_hours = start/3600.round
+									start_minutes = start/1440.round
+									if(start_minutes == 0)
+										start_minutes = "00"
+									end
+									start_string << "#{start_hours}:#{start_minutes}"
+							
+									finish_string = ""
+									finish_hours = finish/3600.round
+									finish_minutes = finish/1440.round
+									if(finish_minutes == 0)
+										finish_minutes = "00"
+									end
+									finish_string << "#{finish_hours}:#{finish_minutes}"
+									%>							
+									<tr row_id="<%= id %>">
+										<td> <%= name %></td>
+										<td> <%= callback_names %> </td>
+										<td> <%= start_string %> </td>
+										<td> <%= finish_string %> </td>
+										<td> <%= credits %> </td>
+										<td> <%= color_name %> </td>
+										<td> <%= light_names %> </td>
+										<td>
+											<label class="btn btn-default btn-xsmall btn-danger" id="remove-rule" style="margin: 2%;">
+												<span class="glyphicon glyphicon-minus" aria-hidden="true" />
+											</label>
+										</td>
+									</tr>
+								<%
+								end
+							end%>
+						
+								<tr>
+									<td>
+										<div class="input-group">
+											<input type="text" class="form-control" placeholder="Description" id="name-field">
+										</div>
+									</td>
+									<td>
+										<select id="sensors" class="form-control">
+											<% sensors = settings.db.execute("SELECT uuid, name from Modules;") %>
+											<% sensors.each do |sensor| %>
+										    	<option value="<%=sensor[0]%>"><%=sensor[1]%></option>
+											<%end%>
+										</select>
+									</td>
+									<td>
+										<select class="form-control" style="float:left;" id="start-hour">
+											<% for i in 0..23 %>
+												<option value="<%=i*3600%>"> <%=i%> </option>
+											<%end%>
+										</select>
+										
+										<select class="form-control" style="float:left;" id="start-minute">
+											<% for i in 0..59 %>
+												<option value="<%=i*1440%>"> <%=i%> </option>
+											<%end%>
+										</select>
+									</td>
+									<td>
+										<select class="form-control" style="float:left;" id="finish-hour">
+											<% for i in 0..23 %>
+												<option value="<%=i*3600%>"> <%=i%> </option>
+											<%end%>
+										</select>
+										
+										<select class="form-control" style="float:left;" id="finish-minute">
+											<% for i in 0..59 %>
+												<option value="<%i*1440%>"> <%=i%> </option>
+											<%end%>
+										</select>
+									</td>
+									<td>
+										<div class="input-group">
+											<input type="text" class="form-control" placeholder="Minutes" id="credit-field">
+										</div>
+									</td>
+									<td>
+										<select class="form-control" style="float:left;" id="color">
+											<% colors = ["White", "Red", "Yellow", "Orange", "Blue", "Purple"]%>
+											<% colors.each do |color| %>
+												<option> <%=color%> </option>
+											<%end%>
+										</select>
+									</td>
+									<td>
+										<select class="form-control" id="lights">
+											<% lights = settings.db.execute("SELECT id, label from Lights;") %>
+											<% lights.each do |light| %>
+										    	<option value=<%="#{light[0]}"%>><%=light[1]%></option>
+											<%end%>
+										</select>
+									</td>
+						
+									<td>
+										<label class="btn btn-default btn-small btn-success" id="add-rule">
+											<span class="glyphicon glyphicon-plus" aria-hidden="true" />
+										</label>
+									</td>
+								</tr>
+							</table>
+						</div>
+				
+				
+				
+				
+				
+						<div role="tabpanel" class="tab-pane fade" id="profiles">
+							<div style="overflow: hidden;">
+								<div style="float:left; width:32%; padding:1%;">
+									<h2>Profiles</h2>
+							
+									<% profiles = settings.db.execute("SELECT id, name FROM Profiles;") %>
+									<%puts profiles.inspect%>
+									<select id="stored-profiles" class="form-control" style="margin: 2%;">
+										<option></option>
+										<% profiles.each do|profile| %>
+										<option value="<%=profile[0]%>"><%=profile[1]%></option>
+										<% end %>
+									</select>
+									<label class="btn btn-default btn-small btn-success" style="float: left; margin: 1%;" id="add-profile">
+										<span class="glyphicon glyphicon-plus" aria-hidden="true" />
+									</label>
+									<div class="input-group" style="float: left; margin: 1%;" id="add-profile-name">
+										<input type="text" class="form-control" placeholder="Name">
+									</div>
+								</div>
+						
+								<div id="edit-profile" value="" style="float:left; width:32%; padding:1%">
+									<h2 id="edit-title">Current Profile</h2>
+							
+									<select multiple class="form-control" id="edit-rules">
+									</select>
+							
+										<label class="btn btn-default btn-sm btn-success" style="float:left; margin-top: 2%;" id="save-profile">
+											Save
+										</label>
+							
+										<label class="btn btn-default btn-sm btn-danger" style="float:right; margin-top: 2%;" id="remove-profile-rule">
+											<span class="glyphicon glyphicon-arrow-right" aria-hidden="true" />
+										</label>
+										
+										<label class="btn btn-default btn-sm btn-primary" style="float:right; margin: 2%;" id="set-active">
+											Activate
+										</label>
+									</div>
+						
+									<div style="float:left; width:32%; padding: 1%">
+										<h2>Rules</h2>
+										<select multiple class="form-control" id="rule-list" style="overflow-y:hidden;">
+
+										</select>
+							
+											<label class="btn btn-default btn-sm btn-success" style="float:left; margin: 2%;" id="add-profile-rule">
+												<span class="glyphicon glyphicon-arrow-left" aria-hidden="true" />
+											</label>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+</div>
+
+<script>
+	$(function () {
+		$('#myTab a:last').tab('show')
+	})
+  
+	$('.dropdown-toggle').dropdown()
+	
+	$('body').on('change', '#stored-profiles', function () {
+		id = $("#stored-profiles").val();
+		url = "/Greenlights/rules/" + id //+ id;
+		var data = new Object();
+		data[":id"] = id
+		$.getJSON(url, data, function(msg){
+			console.log($(msg));
+			if(msg != ""){
+				var message = "<h2>Editing " + $("#stored-profiles option:selected").text() + "</h2>";
+				$('#edit-title').html(message);
+				$("#edit-rules").html('');
+				$("#edit-profile").val(id);
+				$("#rule-list").html('');
+				$.each(msg["current_rules"], function(index) {
+					var arr = msg["current_rules"][index];
+					var rule_id = arr[0][0];
+					var rule_name = arr[0][1];
+					var append_me = "<option value=\"" + rule_id + "\"> " + rule_name + "</option>";
+					$("#edit-rules").append(append_me);
+				});
+				
+				$.each(msg["unassociated_rules"], function(index) {
+					var arr = msg["unassociated_rules"][index];
+					var rule_id = arr[0][0];
+					var rule_name = arr[0][1];
+					var append_me = "<option value=\"" + rule_id + "\"> " + rule_name + "</option>";
+					$("#rule-list").append(append_me);
+				});
+			}
+		});
+	});
+	
+	$('body').on('click', '#add-rule', function () {
+			var rule = new Object();
+			rule["name"] = $("#name-field").val();
+			rule["sensor"] = [$("#sensors option:selected").val()];
+			rule["start"] = $("#start-hour option:selected").val()+$("#start-minute option:selected").val();
+			rule["end"] = $("#finish-hour option:selected").val()+$("#finish-minute option:selected").val();
+			rule["credits"] = $("#credit-field").val();
+			rule["color"] = $("#color option:selected").text();
+			rule["lights"] = [$("#lights option:selected").text()];
+			$.ajax({
+				type : 'POST',
+				url : '/Greenlights/add_rule',
+				data : rule
+			}).done(function(){
+				window.location.replace("dashboard");
+			});
+	});
+	
+	$('body').on('click', '#save-profile', function () {
+			var params = new Object();
+			params["profile"] = $("#edit-profile").val();
+			params["rules"] = [];
+			params["not_rules"] = [];
+			console.log($('#edit-rules option'));
+			$('#edit-rules option').each(function() { 
+				console.log($(this).val());
+				params["rules"].push($(this).val());
+			});
+			$("#rule-list option").each(function() {
+				params["not_rules"].push($(this).val());
+			})
+			
+			$.ajax({
+				type : 'POST',
+				url : '/Greenlights/save_profile',
+				data : params
+			}).done(function(){
+				window.location.replace("dashboard");
+			});
+	});
+	
+	$('body').on('click', '#remove-rule', function () {
+		rule_id = $(this).parent().parent().attr('row_id');
+		var id = new Object();
+		id["id"] = rule_id;
+		$.ajax({
+			type : 'GET',
+			url : '/Greenlights/remove_rule',
+			data : id
+		}).done(function(){
+			window.location.replace("dashboard");
+		});
+		
+	});
+	
+	$('body').on('click', '#add-profile-rule', function () {
+		$("#rule-list option:selected").each(function() {
+			var append_me = "<option value=\"" + $(this).val() + "\"> " + $(this).text() + "</option>";
+			$("#edit-rules").append(append_me);
+			$(this).remove();
+		})
+	});
+	
+	$('body').on('click', '#remove-profile-rule', function () {
+		$("#edit-rules option:selected").each(function() {
+			var append_me = "<option value=\"" + $(this).val() + "\"> " + $(this).text() + "</option>";
+			$("#rule-list").append(append_me);
+			$(this).remove();
+		})
+	});
+	
+	$('body').on('click', '#set-active', function () {
+		var params = new Object();
+		params["profile"] = $("#edit-profile").val();
+		console.log(params);
+		$.ajax({
+			type : 'POST',
+			url : '/Greenlights/set_active',
+			data : params
+		})
+	});
+</script>
